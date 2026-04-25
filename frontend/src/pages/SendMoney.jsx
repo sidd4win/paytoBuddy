@@ -2,6 +2,8 @@ import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import axios from "axios"
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://paybuddy-1.onrender.com/api/v1";
+
 export function SendMoney() {
     const [searchParams] = useSearchParams()
     const id = searchParams.get("id")
@@ -79,7 +81,7 @@ export function SendMoney() {
                         <button
                             onClick={async () => {
                                 try {
-                                    await axios.post("http://localhost:3000/api/v1/account/transfer", {
+                                    await axios.post(`${BACKEND_URL}/account/transfer`, {
                                         to: id,
                                         amount
                                     }, {
@@ -93,6 +95,7 @@ export function SendMoney() {
                                     setTimeout(() => setShowToast(false), 4000)
                                 } catch (e) {
                                     console.error("Transfer failed", e)
+                                    alert(e.response?.data?.message || "Transfer failed. Please check your balance or try again.");
                                 }
                             }}
                             className="w-full text-white bg-rzp-blue hover:bg-rzp-blue-hover focus:ring-4 focus:ring-blue-100 font-semibold rounded-xl text-sm px-5 py-3 transition-all duration-200 shadow-sm"

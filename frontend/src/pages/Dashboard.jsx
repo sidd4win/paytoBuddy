@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { Button } from "../components/Button"
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://paybuddy-1.onrender.com/api/v1";
+
 export function Dashboard() {
     const [balance, setBalance] = useState(0)
     const [users, setUsers] = useState([])
@@ -35,13 +37,13 @@ export function Dashboard() {
     };
 
     useEffect(() => {
-        axios.get("http://localhost:3000/api/v1/account/balance", {
+        axios.get(`${BACKEND_URL}/account/balance`, {
             headers: {
                 Authorization: "Bearer " + localStorage.getItem("token")
             }
         }).then(res => setBalance(res.data.balance))
         
-        axios.get("http://localhost:3000/api/v1/user/me", {
+        axios.get(`${BACKEND_URL}/user/me`, {
             headers: {
                 Authorization: "Bearer " + localStorage.getItem("token")
             }
@@ -49,7 +51,7 @@ export function Dashboard() {
     }, [])
 
     useEffect(() => {
-        axios.get("http://localhost:3000/api/v1/user/bulk?filter=" + filter, {
+        axios.get(`${BACKEND_URL}/user/bulk?filter=` + filter, {
             headers: {
                 Authorization: "Bearer " + localStorage.getItem("token")
             }

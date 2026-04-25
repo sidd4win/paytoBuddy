@@ -4,6 +4,8 @@ import axios from "axios"
 import { InputBox } from "../components/InputBox"
 import { GoogleLogin } from '@react-oauth/google'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://paybuddy-1.onrender.com/api/v1";
+
 export function Signup() {
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
@@ -72,8 +74,14 @@ export function Signup() {
                         
                         <button
                             onClick={async () => {
+                                // Basic frontend validation to save a request
+                                if (!username.includes("@")) {
+                                    alert("Please enter a valid email address");
+                                    return;
+                                }
+
                                 try {
-                                    const response = await axios.post("http://localhost:3000/api/v1/user/signup", {
+                                    const response = await axios.post(`${BACKEND_URL}/user/signup`, {
                                         username,
                                         firstName,
                                         lastName,
@@ -82,8 +90,10 @@ export function Signup() {
                                     localStorage.setItem("token", response.data.token)
                                     navigate("/dashboard")
                                 } catch (e) {
-                                    console.error("Sign up failed")
-                                    alert(e.response?.data?.message || "Sign up failed. Please ensure you enter a valid email address.");
+                                    console.error("Sign up failed", e)
+                                    // IMPROVED ERROR MESSAGE:
+                                    const errorMsg = e.response?.data?.message || e.message || "Network Error: Could not connect to the server.";
+                                    alert(errorMsg);
                                 }
                             }}
                             className="w-full text-white bg-rzp-blue hover:bg-rzp-blue-hover focus:ring-4 focus:ring-blue-100 font-semibold rounded-lg text-sm px-5 py-3.5 transition-all duration-200 shadow-sm mt-2"
@@ -106,7 +116,7 @@ export function Signup() {
                             <GoogleLogin
                                 onSuccess={async (credentialResponse) => {
                                     try {
-                                        const response = await axios.post("http://localhost:3000/api/v1/user/google-signin", {
+                                        const response = await axios.post(`${BACKEND_URL}/user/google-signin`, {
                                             credential: credentialResponse.credential
                                         });
                                         localStorage.setItem("token", response.data.token);

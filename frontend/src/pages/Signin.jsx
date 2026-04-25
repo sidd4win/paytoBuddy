@@ -4,6 +4,8 @@ import axios from "axios"
 import { InputBox } from "../components/InputBox"
 import { GoogleLogin } from '@react-oauth/google'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://paybuddy-1.onrender.com/api/v1";
+
 export function Signin() {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
@@ -67,7 +69,7 @@ export function Signin() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const response = await axios.post("http://localhost:3000/api/v1/user/signin", {
+                                    const response = await axios.post(`${BACKEND_URL}/user/signin`, {
                                         username,
                                         password
                                     })
@@ -98,7 +100,7 @@ export function Signin() {
                             <GoogleLogin
                                 onSuccess={async (credentialResponse) => {
                                     try {
-                                        const response = await axios.post("http://localhost:3000/api/v1/user/google-signin", {
+                                        const response = await axios.post(`${BACKEND_URL}/user/google-signin`, {
                                             credential: credentialResponse.credential
                                         });
                                         localStorage.setItem("token", response.data.token);
