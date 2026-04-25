@@ -5,10 +5,9 @@ const router = express.Router();
 const zod = require("zod");
 const { User, Account } = require("../db");
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config");
+const { JWT_SECRET, GOOGLE_CLIENT_ID } = require("../config");
 const  { authMiddleware } = require("../auth"); // Updated from ../middleware
 const { OAuth2Client } = require('google-auth-library');
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const signupBody = zod.object({
