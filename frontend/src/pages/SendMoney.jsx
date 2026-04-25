@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import axios from "axios"
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://paybuddy-1.onrender.com/api/v1";
@@ -10,6 +10,7 @@ export function SendMoney() {
     const name = searchParams.get("name")
     const [amount, setAmount] = useState(0)
     const [showToast, setShowToast] = useState(false)
+    const navigate = useNavigate()
 
     const playSuccessSound = () => {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -58,7 +59,16 @@ export function SendMoney() {
     return <div className="flex justify-center h-screen bg-gray-50 font-sans">
         <div className="h-full flex flex-col justify-center">
             <div className="border border-gray-200 max-w-md p-8 space-y-6 w-96 bg-white shadow-sm rounded-2xl">
-                <div className="flex flex-col space-y-1.5">
+                <div className="flex flex-col space-y-1.5 relative">
+                    <button 
+                        onClick={() => navigate("/dashboard")}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-rzp-navy transition-all duration-200"
+                        title="Back to Dashboard"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
                     <h2 className="text-3xl font-bold text-center tracking-tight text-rzp-navy">Send Money</h2>
                 </div>
                 <div>
