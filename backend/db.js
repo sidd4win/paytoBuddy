@@ -1,22 +1,19 @@
 // backend/db.js
 const mongoose = require('mongoose');
 
-const MONGODB_URI = process.env.MONGODB_URI;
+// Supporting both MONGODB_URI and MONGODB_URL to avoid confusion
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGODB_URL;
 
 if (!MONGODB_URI) {
-    console.error("❌ CRITICAL ERROR: MONGODB_URI environment variable is not defined!");
+    console.error("❌ CRITICAL ERROR: MONGODB_URI/URL environment variable is not defined!");
     console.error("Please set MONGODB_URI in your deployment platform (Render/Vercel).");
-    // In production, we should probably exit if the DB is required
-    if (process.env.NODE_ENV === 'production') {
-        // Just log for now to avoid crashing loops, but subsequent DB calls will fail fast
-    }
 } else {
     const maskedURI = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
     console.log(`📡 Attempting to connect to MongoDB: ${maskedURI}`);
 }
 
 mongoose.connect(MONGODB_URI || "mongodb://localhost:27017/paytm", {
-    serverSelectionTimeoutMS: 5000, // Fail after 5 seconds instead of 30
+    serverSelectionTimeoutMS: 5000, 
 })
     .then(() => console.log("✅ MongoDB connected successfully!"))
     .catch((err) => {
@@ -24,7 +21,6 @@ mongoose.connect(MONGODB_URI || "mongodb://localhost:27017/paytm", {
         console.error(err.message);
     });
 
-// Create a Schema for Users
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
@@ -56,7 +52,7 @@ const userSchema = new mongoose.Schema({
 
 const accountSchema = new mongoose.Schema({
     userId: {
-        type: mongoose.Schema.Types.ObjectId, // Reference to User model
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
