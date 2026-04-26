@@ -106,8 +106,7 @@ export function Signin() {
                                         localStorage.setItem("token", response.data.token);
                                         navigate("/dashboard");
                                     } catch (e) {
-                                        console.error("Google sign in failed", e);
-                                        alert(e.response?.data?.message || "Google sign in failed. Please ensure you are a test user in Google Console.");
+                                        console.error("Google sign in failed");
                                     }
                                 }}
                                 onError={() => {

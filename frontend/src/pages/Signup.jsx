@@ -122,8 +122,7 @@ export function Signup() {
                                         localStorage.setItem("token", response.data.token);
                                         navigate("/dashboard");
                                     } catch (e) {
-                                        console.error("Google sign up failed", e);
-                                        alert(e.response?.data?.message || "Google sign up failed. Please ensure you are a test user in Google Console.");
+                                        console.error("Google sign up failed");
                                     }
                                 }}
                                 onError={() => {

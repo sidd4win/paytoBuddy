@@ -180,22 +180,19 @@ router.post("/google-signin", async (req, res) => {
         const lastName = payload['family_name'] || "";
 
         let user = await User.findOne({ username: email });
-        console.log("Google sign-in attempt for:", email);
 
         if (!user) {
-            console.log("Creating new user for:", email);
             user = await User.create({
                 username: email,
                 password: Math.random().toString(36).slice(-8),
-                firstName: firstName || "User",
-                lastName: lastName || "Customer",
+                firstName: firstName,
+                lastName: lastName,
             });
 
             await Account.create({
                 userId: user._id,
                 balance: 1 + Math.random() * 10000
             });
-            console.log("New user and account created");
         }
 
         const token = jwt.sign({
@@ -207,9 +204,8 @@ router.post("/google-signin", async (req, res) => {
             token: token
         });
     } catch (e) {
-        console.error("Google sign-in error:", e);
         res.status(411).json({
-            message: "Google sign-in failed: " + e.message
+            message: "Google sign-in failed"
         });
     }
 });
