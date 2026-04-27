@@ -69,6 +69,17 @@ export function Dashboard() {
                 </div>
             </div>
             <div className="flex items-center space-x-4">
+                <button 
+                    onClick={() => navigate("/history")}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-rzp-navy/70 hover:text-rzp-navy group"
+                    title="Transaction History"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform">
+                        <path d="M12 8v4l3 3" />
+                        <circle cx="12" cy="12" r="9" />
+                    </svg>
+                    <span className="font-semibold hidden sm:inline">History</span>
+                </button>
                 <div className="text-rzp-navy/70 font-semibold">Welcome, {clientName || "User"}</div>
                 <div className="rounded-full h-10 w-10 bg-rzp-blue/10 flex items-center justify-center text-rzp-blue font-bold shadow-sm border border-blue-100">
                     {clientName ? clientName[0].toUpperCase() : "U"}

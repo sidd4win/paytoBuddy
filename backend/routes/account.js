@@ -1,7 +1,7 @@
 // backend/routes/account.js
 const express = require('express');
 const { authMiddleware } = require('../auth'); // Updated from ../middleware
-const { Account } = require('../db');
+const { Account, Transaction } = require('../db');
 const mongoose=require('mongoose');
 
 const router = express.Router();
@@ -48,6 +48,36 @@ router.post("/transfer", authMiddleware, async (req, res) => {
         { $inc: { balance: amount } }
     );
 
+    // Record transaction
+    await Transaction.create({
+        senderId: req.userId,
+        receiverId: to,
+        amount: amount
+    });
+
     res.json({ message: "Transfer successful" });
+});
+
+router.get("/history", authMiddleware, async (req, res) => {
+    const transactions = await Transaction.find({
+        $or: [
+            { senderId: req.userId },
+            { receiverId: req.userId }
+        ]
+    })
+    .populate('senderId', 'firstName lastName')
+    .populate('receiverId', 'firstName lastName')
+    .sort({ date: -1 });
+
+    res.json({
+        transactions: transactions.map(t => ({
+            id: t._id,
+            sender: `${t.senderId.firstName} ${t.senderId.lastName}`,
+            receiver: `${t.receiverId.firstName} ${t.receiverId.lastName}`,
+            amount: t.amount,
+            date: t.date,
+            type: t.senderId._id.toString() === req.userId ? "sent" : "received"
+        }))
+    });
 });
 module.exports = router;
