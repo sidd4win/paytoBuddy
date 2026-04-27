@@ -4,6 +4,7 @@ import { Signin } from './pages/Signin'
 import { Dashboard } from './pages/Dashboard'
 import { SendMoney } from './pages/SendMoney'
 import { History } from './pages/History'
+import { AdminDashboard } from './pages/AdminDashboard'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/send" element={<SendMoney />} />
           <Route path="/history" element={<History />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </BrowserRouter>
     </GoogleOAuthProvider>

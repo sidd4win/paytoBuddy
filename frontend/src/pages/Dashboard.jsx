@@ -10,6 +10,7 @@ export function Dashboard() {
     const [users, setUsers] = useState([])
     const [filter, setFilter] = useState("")
     const [clientName, setClientName] = useState("")
+    const [isAdmin, setIsAdmin] = useState(false)
     const navigate = useNavigate()
 
     const capitalize = (str) => {
@@ -47,7 +48,10 @@ export function Dashboard() {
             headers: {
                 Authorization: "Bearer " + localStorage.getItem("token")
             }
-        }).then(res => setClientName(capitalize(res.data.firstName)))
+        }).then(res => {
+            setClientName(capitalize(res.data.firstName));
+            setIsAdmin(res.data.isAdmin);
+        })
     }, [])
 
     useEffect(() => {
@@ -80,6 +84,15 @@ export function Dashboard() {
                     </svg>
                     <span className="font-semibold hidden sm:inline">History</span>
                 </button>
+                {isAdmin && (
+                    <button 
+                        onClick={() => navigate("/admin")}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-rzp-navy text-white hover:bg-navy-900 transition-all shadow-md shadow-navy-100 group"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span className="font-semibold hidden sm:inline">Admin Panel</span>
+                    </button>
+                )}
                 <div className="text-rzp-navy/70 font-semibold">Welcome, {clientName || "User"}</div>
                 <div className="rounded-full h-10 w-10 bg-rzp-blue/10 flex items-center justify-center text-rzp-blue font-bold shadow-sm border border-blue-100">
                     {clientName ? clientName[0].toUpperCase() : "U"}

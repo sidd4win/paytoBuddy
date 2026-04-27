@@ -41,6 +41,7 @@ router.post("/signup", async (req, res) => {
             password: req.body.password,
             firstName: req.body.firstName,
             lastName: req.body.lastName,
+            isAdmin: req.body.username === "admin@paybuddy.com"
         });
         const userId = user._id;
 
@@ -135,7 +136,8 @@ router.get("/me", authMiddleware, async (req, res) => {
     if (user) {
         res.json({
             firstName: user.firstName,
-            lastName: user.lastName
+            lastName: user.lastName,
+            isAdmin: user.isAdmin
         });
     } else {
         res.status(404).json({ message: "User not found" });
