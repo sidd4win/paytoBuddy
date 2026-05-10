@@ -53,14 +53,14 @@ export function SendMoney() {
             utterance.rate = 1.0;
             utterance.pitch = 1.1;
             window.speechSynthesis.speak(utterance);
-        }, 500);
+        }, 100);
     };
 
     return <div className="flex justify-center h-screen bg-gray-50 font-sans">
         <div className="h-full flex flex-col justify-center">
             <div className="border border-gray-200 max-w-md p-8 space-y-6 w-96 bg-white shadow-sm rounded-2xl">
                 <div className="flex flex-col space-y-1.5 relative">
-                    <button 
+                    <button
                         onClick={() => navigate("/dashboard")}
                         className="absolute left-0 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-rzp-navy transition-all duration-200"
                         title="Back to Dashboard"
@@ -90,10 +90,18 @@ export function SendMoney() {
                         </div>
                         <button
                             onClick={async () => {
+                                if (!amount || amount <= 0) {
+                                    alert("Please enter a valid amount");
+                                    return;
+                                }
+
+                                const confirmTransfer = window.confirm(`Are you sure you want to send ₹${amount} to ${name}?`);
+                                if (!confirmTransfer) return;
+
                                 try {
                                     await axios.post(`${BACKEND_URL}/account/transfer`, {
                                         to: id,
-                                        amount
+                                        amount: Number(amount)
                                     }, {
                                         headers: {
                                             Authorization: "Bearer " + localStorage.getItem("token")
@@ -102,7 +110,10 @@ export function SendMoney() {
 
                                     playSuccessSound()
                                     setShowToast(true)
-                                    setTimeout(() => setShowToast(false), 4000)
+                                    setTimeout(() => {
+                                        setShowToast(false);
+                                        navigate("/dashboard");
+                                    }, 4000);
                                 } catch (e) {
                                     console.error("Transfer failed", e)
                                     alert(e.response?.data?.message || "Transfer failed. Please check your balance or try again.");

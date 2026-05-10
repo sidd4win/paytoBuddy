@@ -12,12 +12,38 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: "smtp-relay.brevo.com",
+    port: 587,
     auth: {
-        user: process.env.SMTP_EMAIL || "dummy@gmail.com",
-        pass: process.env.SMTP_PASSWORD || "dummy"
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASSWORD
     }
 });
+
+async function sendOtp(email, user) {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    console.log(`[DEV MODE] OTP for ${email} is: ${otp}`);
+
+    if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
+        try {
+            await transporter.sendMail({
+                from: process.env.SMTP_EMAIL,
+                to: email,
+                subject: "Your PayBuddy OTP",
+                text: `Your OTP for PayBuddy is: ${otp}. It is valid for 5 minutes.`
+            });
+        } catch (emailError) {
+            console.error("Failed to send email:", emailError);
+        }
+    }
+    return otp;
+}
 
 const signupBody = zod.object({
     username: zod.string().email(),
@@ -40,6 +66,15 @@ router.post("/signup", async (req, res) => {
         });
 
         if (existingUser) {
+            if (!existingUser.isVerified) {
+                // User exists but not verified, send OTP again
+                await sendOtp(req.body.username, existingUser);
+                return res.json({
+                    message: "User already exists but is unverified. OTP resent.",
+                    step: "OTP_REQUIRED",
+                    email: req.body.username
+                });
+            }
             return res.status(411).json({
                 message: "Email already taken"
             });
@@ -59,13 +94,12 @@ router.post("/signup", async (req, res) => {
             balance: 1 + Math.random() * 10000
         });
 
-        const token = jwt.sign({
-            userId
-        }, JWT_SECRET);
+        await sendOtp(req.body.username, user);
 
         res.json({
-            message: "User created successfully",
-            token: token
+            message: "OTP sent to your email for verification",
+            step: "OTP_REQUIRED",
+            email: req.body.username
         });
     } catch (e) {
         console.error("Signup error details:", e);
@@ -98,30 +132,7 @@ router.post("/signin", async (req, res) => {
         });
 
         if (user) {
-            // Generate 6 digit OTP
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            // OTP expiry: 5 minutes from now
-            const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
-
-            user.otp = otp;
-            user.otpExpiry = otpExpiry;
-            await user.save();
-
-            console.log(`[DEV MODE] OTP for ${user.username} is: ${otp}`);
-
-            if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
-                try {
-                    await transporter.sendMail({
-                        from: process.env.SMTP_EMAIL,
-                        to: user.username,
-                        subject: "Your PayBuddy OTP",
-                        text: `Your OTP for PayBuddy login is: ${otp}. It is valid for 5 minutes.`
-                    });
-                } catch (emailError) {
-                    console.error("Failed to send email:", emailError);
-                    // Don't throw, let them test with the console logged OTP
-                }
-            }
+            await sendOtp(user.username, user);
 
             return res.json({
                 step: "OTP_REQUIRED",
@@ -136,6 +147,30 @@ router.post("/signin", async (req, res) => {
     } catch (e) {
         console.error("Signin error:", e);
         res.status(500).json({ message: "Signin failed: " + e.message });
+    }
+});
+
+router.post("/signin-otp-request", async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(404).json({ message: "User not found with this email" });
+        }
+
+        await sendOtp(username, user);
+        res.json({ 
+            message: "OTP sent to your email",
+            step: "OTP_REQUIRED",
+            email: username
+        });
+    } catch (e) {
+        console.error("Signin OTP request error:", e);
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -167,6 +202,7 @@ router.post("/verify-otp", async (req, res) => {
         // OTP is valid
         user.otp = undefined;
         user.otpExpiry = undefined;
+        user.isVerified = true;
         await user.save();
 
         const token = jwt.sign({
@@ -177,6 +213,26 @@ router.post("/verify-otp", async (req, res) => {
 
     } catch (e) {
         console.error("Verify OTP error:", e);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.post("/resend-otp", async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ username: email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        await sendOtp(email, user);
+        res.json({ message: "OTP resent successfully" });
+    } catch (e) {
+        console.error("Resend OTP error:", e);
         res.status(500).json({ message: "Server error" });
     }
 });

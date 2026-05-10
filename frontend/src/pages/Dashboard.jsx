@@ -42,14 +42,19 @@ export function Dashboard() {
         if (!amount || isNaN(amount) || Number(amount) <= 0) return;
 
         try {
-            // 1. Create order
+            // 1. Get Razorpay Key from backend
+            const { data: { key } } = await axios.get(`${BACKEND_URL}/payment/key`, {
+                headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+            });
+
+            // 2. Create order
             const orderRes = await axios.post(`${BACKEND_URL}/payment/orders`, { amount: Number(amount) }, {
                 headers: { Authorization: "Bearer " + localStorage.getItem("token") }
             });
 
-            // 2. Open Razorpay Checkout
+            // 3. Open Razorpay Checkout
             const options = {
-                key: "rzp_test_SmMcBQkAbICXCX", // Test Key
+                key: key,
                 amount: orderRes.data.amount,
                 currency: orderRes.data.currency,
                 name: "PayBuddy Wallet",
@@ -57,7 +62,7 @@ export function Dashboard() {
                 order_id: orderRes.data.orderId,
                 handler: async function (response) {
                     try {
-                        await axios.post(`${BACKEND_URL}/payment/verify`, {
+                        const verifyRes = await axios.post(`${BACKEND_URL}/payment/verify`, {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
@@ -65,10 +70,10 @@ export function Dashboard() {
                         }, {
                             headers: { Authorization: "Bearer " + localStorage.getItem("token") }
                         });
-                        alert("Payment successful! Balance updated.");
+                        alert("✅ Payment successful! Balance updated.");
                         setBalance(prev => prev + Number(amount));
                     } catch (err) {
-                        alert("Payment verification failed!");
+                        alert("❌ Payment verification failed!");
                     }
                 },
                 prefill: {
@@ -82,7 +87,7 @@ export function Dashboard() {
             rzp.open();
         } catch (err) {
             console.error(err);
-            alert("Error initializing payment");
+            alert("Error initializing payment. Please try again.");
         }
     };
 

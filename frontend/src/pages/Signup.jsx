@@ -11,7 +11,45 @@ export function Signup() {
     const [lastName, setLastName] = useState("")
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [otp, setOtp] = useState("")
+    const [step, setStep] = useState("DETAILS") // DETAILS or OTP
     const navigate = useNavigate()
+
+    const handleSignup = async () => {
+        // Basic frontend validation to save a request
+        if (!username.includes("@")) {
+            alert("Please enter a valid email address");
+            return;
+        }
+
+        try {
+            if (step === "DETAILS") {
+                const response = await axios.post(`${BACKEND_URL}/user/signup`, {
+                    username,
+                    firstName,
+                    lastName,
+                    password
+                });
+                if (response.data.step === "OTP_REQUIRED") {
+                    setStep("OTP");
+                    alert(response.data.message || "OTP sent to your email");
+                }
+            } else if (step === "OTP") {
+                const response = await axios.post(`${BACKEND_URL}/user/verify-otp`, {
+                    email: username,
+                    otp
+                });
+                if (response.data.token) {
+                    localStorage.setItem("token", response.data.token);
+                    navigate("/dashboard");
+                }
+            }
+        } catch (e) {
+            console.error("Sign up failed", e);
+            const errorMsg = e.response?.data?.message || e.message || "Network Error: Could not connect to the server.";
+            alert(errorMsg);
+        }
+    };
 
     return (
         <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 font-sans bg-white">
@@ -61,81 +99,92 @@ export function Signup() {
                             <span className="text-white font-bold text-2xl leading-none italic">P</span>
                         </div>
                         <p className="text-gray-600 font-medium mb-1 text-sm">Welcome to PayBuddy</p>
-                        <h2 className="text-[1.75rem] leading-tight font-bold text-rzp-navy tracking-tight">Create your account</h2>
+                        <h2 className="text-[1.75rem] leading-tight font-bold text-rzp-navy tracking-tight">
+                            {step === "DETAILS" ? "Create your account" : "Verify your email"}
+                        </h2>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <InputBox onChange={e => setFirstName(e.target.value)} placeholder="First Name" label={""} />
-                            <InputBox onChange={e => setLastName(e.target.value)} placeholder="Last Name" label={""} />
-                        </div>
-                        <InputBox onChange={e => setUsername(e.target.value)} placeholder="Enter your email or phone number" label={""} />
-                        <InputBox onChange={e => setPassword(e.target.value)} placeholder="Create a password" label={""} />
-                        
-                        <button
-                            onClick={async () => {
-                                // Basic frontend validation to save a request
-                                if (!username.includes("@")) {
-                                    alert("Please enter a valid email address");
-                                    return;
-                                }
+                        {step === "DETAILS" ? (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InputBox onChange={e => setFirstName(e.target.value)} placeholder="First Name" label={""} />
+                                    <InputBox onChange={e => setLastName(e.target.value)} placeholder="Last Name" label={""} />
+                                </div>
+                                <InputBox onChange={e => setUsername(e.target.value)} placeholder="Enter your email address" label={""} />
+                                <InputBox onChange={e => setPassword(e.target.value)} type="password" placeholder="Create a password" label={""} />
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-sm text-gray-500 mb-2">We sent a verification code to {username}</p>
+                                <InputBox onChange={e => setOtp(e.target.value)} placeholder="Enter 6-digit OTP" label={""} />
+                            </>
+                        )}
 
-                                try {
-                                    const response = await axios.post(`${BACKEND_URL}/user/signup`, {
-                                        username,
-                                        firstName,
-                                        lastName,
-                                        password
-                                    })
-                                    localStorage.setItem("token", response.data.token)
-                                    navigate("/dashboard")
-                                } catch (e) {
-                                    console.error("Sign up failed", e)
-                                    // IMPROVED ERROR MESSAGE:
-                                    const errorMsg = e.response?.data?.message || e.message || "Network Error: Could not connect to the server.";
-                                    alert(errorMsg);
-                                }
-                            }}
+                        <button
+                            onClick={handleSignup}
                             className="w-full text-white bg-rzp-blue hover:bg-rzp-blue-hover focus:ring-4 focus:ring-blue-100 font-semibold rounded-lg text-sm px-5 py-3.5 transition-all duration-200 shadow-sm mt-2"
                         >
-                            SignUp
+                            {step === "DETAILS" ? "SignUp" : "Verify & Register"}
                         </button>
+
+                        {step === "OTP" && (
+                            <div className="text-center mt-4">
+                                <button 
+                                    onClick={async () => {
+                                        try {
+                                            await axios.post(`${BACKEND_URL}/user/resend-otp`, { email: username });
+                                            alert("OTP resent successfully!");
+                                        } catch (e) {
+                                            alert("Failed to resend OTP");
+                                        }
+                                    }}
+                                    className="text-sm text-rzp-blue font-semibold hover:underline"
+                                >
+                                    Resend OTP
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs">
-                            <span className="px-4 bg-white text-gray-400 font-medium">or</span>
-                        </div>
-                    </div>
+                    {step === "DETAILS" && (
+                        <>
+                            <div className="relative my-6">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-gray-200"></div>
+                                </div>
+                                <div className="relative flex justify-center text-xs">
+                                    <span className="px-4 bg-white text-gray-400 font-medium">or</span>
+                                </div>
+                            </div>
 
-                    <div className="flex justify-center mb-6 w-full">
-                        <div className="w-full border border-gray-200 rounded-lg overflow-hidden flex justify-center py-1">
-                            <GoogleLogin
-                                onSuccess={async (credentialResponse) => {
-                                    try {
-                                        const response = await axios.post(`${BACKEND_URL}/user/google-signin`, {
-                                            credential: credentialResponse.credential
-                                        });
-                                        localStorage.setItem("token", response.data.token);
-                                        navigate("/dashboard");
-                                    } catch (e) {
-                                        console.error("Google sign up failed");
-                                    }
-                                }}
-                                onError={() => {
-                                    console.log('Login Failed');
-                                }}
-                                theme="outline"
-                                size="large"
-                                text="continue_with"
-                            />
-                        </div>
-                    </div>
+                            <div className="flex justify-center mb-6 w-full">
+                                <div className="w-full border border-gray-200 rounded-lg overflow-hidden flex justify-center py-1">
+                                    <GoogleLogin
+                                        onSuccess={async (credentialResponse) => {
+                                            try {
+                                                const response = await axios.post(`${BACKEND_URL}/user/google-signin`, {
+                                                    credential: credentialResponse.credential
+                                                });
+                                                localStorage.setItem("token", response.data.token);
+                                                navigate("/dashboard");
+                                            } catch (e) {
+                                                console.error("Google sign up failed");
+                                            }
+                                        }}
+                                        onError={() => {
+                                            console.log('Login Failed');
+                                        }}
+                                        theme="outline"
+                                        size="large"
+                                        text="continue_with"
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
 
-                    <div className="bg-[#f9f9f9] rounded-xl p-6 border border-gray-100">
+                    <div className="bg-[#f9f9f9] rounded-xl p-6 border border-gray-100 mt-4">
                         <p className="text-sm font-medium text-gray-700 mb-3">Already have an account?</p>
                         <Link to="/signin" className="text-rzp-blue font-semibold text-sm hover:text-rzp-blue-hover hover:underline flex items-center">
                             Sign in to PayBuddy <span className="ml-1 text-lg leading-none">→</span>
@@ -146,3 +195,4 @@ export function Signup() {
         </div>
     )
 }
+

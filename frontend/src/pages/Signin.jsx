@@ -11,21 +11,33 @@ export function Signin() {
     const [password, setPassword] = useState("")
     const [otp, setOtp] = useState("")
     const [step, setStep] = useState("CREDENTIALS")
+    const [loginType, setLoginType] = useState("PASSWORD") // PASSWORD or OTP_ONLY
     const navigate = useNavigate()
 
     const handleSignin = async () => {
         try {
             if (step === "CREDENTIALS") {
-                const response = await axios.post(`${BACKEND_URL}/user/signin`, {
-                    username,
-                    password
-                })
-                if (response.data.step === "OTP_REQUIRED") {
-                    setStep("OTP")
-                    alert(response.data.message || "OTP sent to your email")
-                } else if (response.data.token) {
-                    localStorage.setItem("token", response.data.token)
-                    navigate("/dashboard")
+                if (loginType === "PASSWORD") {
+                    const response = await axios.post(`${BACKEND_URL}/user/signin`, {
+                        username,
+                        password
+                    })
+                    if (response.data.step === "OTP_REQUIRED") {
+                        setStep("OTP")
+                        alert(response.data.message || "OTP sent to your email")
+                    } else if (response.data.token) {
+                        localStorage.setItem("token", response.data.token)
+                        navigate("/dashboard")
+                    }
+                } else {
+                    // OTP Only Login
+                    const response = await axios.post(`${BACKEND_URL}/user/signin-otp-request`, {
+                        username
+                    })
+                    if (response.data.step === "OTP_REQUIRED") {
+                        setStep("OTP")
+                        alert(response.data.message || "OTP sent to your email")
+                    }
                 }
             } else if (step === "OTP") {
                 const response = await axios.post(`${BACKEND_URL}/user/verify-otp`, {
@@ -92,15 +104,17 @@ export function Signin() {
                         </div>
                         <p className="text-gray-600 font-medium mb-2 text-md">Welcome to PayBuddy</p>
                         <h2 className="text-[2rem] leading-tight font-bold text-rzp-navy tracking-tight">
-                            {step === "CREDENTIALS" ? "Get started with your email" : "Enter Verification Code"}
+                            {step === "CREDENTIALS" ? (loginType === "PASSWORD" ? "Signin with Password" : "Signin with OTP") : "Enter Verification Code"}
                         </h2>
                     </div>
 
                     <div className="space-y-4">
                         {step === "CREDENTIALS" ? (
                             <>
-                                <InputBox onChange={e => setUsername(e.target.value)} placeholder="Enter your email or phone number" label={""} />
-                                <InputBox onChange={e => setPassword(e.target.value)} type="password" placeholder="Enter your password" label={""} />
+                                <InputBox onChange={e => setUsername(e.target.value)} placeholder="Enter your email address" label={""} />
+                                {loginType === "PASSWORD" && (
+                                    <InputBox onChange={e => setPassword(e.target.value)} type="password" placeholder="Enter your password" label={""} />
+                                )}
                             </>
                         ) : (
                             <>
@@ -113,8 +127,35 @@ export function Signin() {
                             onClick={handleSignin}
                             className="w-full text-white bg-rzp-blue hover:bg-rzp-blue-hover focus:ring-4 focus:ring-blue-100 font-semibold rounded-lg text-sm px-5 py-3.5 transition-all duration-200 shadow-sm mt-2"
                         >
-                            {step === "CREDENTIALS" ? "Continue" : "Verify & Login"}
+                            {step === "CREDENTIALS" ? (loginType === "PASSWORD" ? "Continue" : "Send OTP") : "Verify & Login"}
                         </button>
+
+                        {step === "CREDENTIALS" && (
+                            <button
+                                onClick={() => setLoginType(loginType === "PASSWORD" ? "OTP" : "PASSWORD")}
+                                className="w-full text-rzp-blue bg-white border border-rzp-blue hover:bg-blue-50 focus:ring-4 focus:ring-blue-100 font-semibold rounded-lg text-sm px-5 py-3.5 transition-all duration-200 mt-2"
+                            >
+                                {loginType === "PASSWORD" ? "Sign in with OTP instead" : "Sign in with Password instead"}
+                            </button>
+                        )}
+
+                        {step === "OTP" && (
+                            <div className="text-center mt-4">
+                                <button 
+                                    onClick={async () => {
+                                        try {
+                                            await axios.post(`${BACKEND_URL}/user/resend-otp`, { email: username });
+                                            alert("OTP resent successfully!");
+                                        } catch (e) {
+                                            alert("Failed to resend OTP");
+                                        }
+                                    }}
+                                    className="text-sm text-rzp-blue font-semibold hover:underline"
+                                >
+                                    Resend OTP
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="relative my-8">
