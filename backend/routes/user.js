@@ -9,6 +9,15 @@ const { JWT_SECRET, GOOGLE_CLIENT_ID } = require("../config");
 const  { authMiddleware } = require("../auth"); // Updated from ../middleware
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.SMTP_EMAIL || "dummy@gmail.com",
+        pass: process.env.SMTP_PASSWORD || "dummy"
+    }
+});
 
 const signupBody = zod.object({
     username: zod.string().email(),
@@ -89,14 +98,36 @@ router.post("/signin", async (req, res) => {
         });
 
         if (user) {
-            const token = jwt.sign({
-                userId: user._id
-            }, JWT_SECRET);
-    
-            res.json({
-                token: token
+            // Generate 6 digit OTP
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            // OTP expiry: 5 minutes from now
+            const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+            user.otp = otp;
+            user.otpExpiry = otpExpiry;
+            await user.save();
+
+            console.log(`[DEV MODE] OTP for ${user.username} is: ${otp}`);
+
+            if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
+                try {
+                    await transporter.sendMail({
+                        from: process.env.SMTP_EMAIL,
+                        to: user.username,
+                        subject: "Your PayBuddy OTP",
+                        text: `Your OTP for PayBuddy login is: ${otp}. It is valid for 5 minutes.`
+                    });
+                } catch (emailError) {
+                    console.error("Failed to send email:", emailError);
+                    // Don't throw, let them test with the console logged OTP
+                }
+            }
+
+            return res.json({
+                step: "OTP_REQUIRED",
+                email: user.username,
+                message: "OTP sent to your email"
             });
-            return;
         }
 
         res.status(411).json({
@@ -105,6 +136,48 @@ router.post("/signin", async (req, res) => {
     } catch (e) {
         console.error("Signin error:", e);
         res.status(500).json({ message: "Signin failed: " + e.message });
+    }
+});
+
+const verifyOtpBody = zod.object({
+    email: zod.string().email(),
+    otp: zod.string()
+});
+
+router.post("/verify-otp", async (req, res) => {
+    try {
+        const { success } = verifyOtpBody.safeParse(req.body);
+        if (!success) {
+            return res.status(400).json({ message: "Invalid inputs" });
+        }
+
+        const user = await User.findOne({ username: req.body.email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.otp !== req.body.otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        if (user.otpExpiry && user.otpExpiry < new Date()) {
+            return res.status(400).json({ message: "OTP expired" });
+        }
+
+        // OTP is valid
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+        await user.save();
+
+        const token = jwt.sign({
+            userId: user._id
+        }, JWT_SECRET);
+
+        res.json({ token: token });
+
+    } catch (e) {
+        console.error("Verify OTP error:", e);
+        res.status(500).json({ message: "Server error" });
     }
 });
 

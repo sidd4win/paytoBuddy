@@ -9,7 +9,39 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://paybuddy-1.onre
 export function Signin() {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [otp, setOtp] = useState("")
+    const [step, setStep] = useState("CREDENTIALS")
     const navigate = useNavigate()
+
+    const handleSignin = async () => {
+        try {
+            if (step === "CREDENTIALS") {
+                const response = await axios.post(`${BACKEND_URL}/user/signin`, {
+                    username,
+                    password
+                })
+                if (response.data.step === "OTP_REQUIRED") {
+                    setStep("OTP")
+                    alert(response.data.message || "OTP sent to your email")
+                } else if (response.data.token) {
+                    localStorage.setItem("token", response.data.token)
+                    navigate("/dashboard")
+                }
+            } else if (step === "OTP") {
+                const response = await axios.post(`${BACKEND_URL}/user/verify-otp`, {
+                    email: username,
+                    otp
+                })
+                if (response.data.token) {
+                    localStorage.setItem("token", response.data.token)
+                    navigate("/dashboard")
+                }
+            }
+        } catch (e) {
+            console.error("Sign in/OTP failed", e)
+            alert(e.response?.data?.message || "Operation failed. Please try again.");
+        }
+    }
 
     return (
         <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 font-sans bg-white">
@@ -59,30 +91,29 @@ export function Signin() {
                             <span className="text-white font-bold text-3xl leading-none italic">P</span>
                         </div>
                         <p className="text-gray-600 font-medium mb-2 text-md">Welcome to PayBuddy</p>
-                        <h2 className="text-[2rem] leading-tight font-bold text-rzp-navy tracking-tight">Get started with your email</h2>
+                        <h2 className="text-[2rem] leading-tight font-bold text-rzp-navy tracking-tight">
+                            {step === "CREDENTIALS" ? "Get started with your email" : "Enter Verification Code"}
+                        </h2>
                     </div>
 
                     <div className="space-y-4">
-                        <InputBox onChange={e => setUsername(e.target.value)} placeholder="Enter your email or phone number" label={""} />
-                        <InputBox onChange={e => setPassword(e.target.value)} placeholder="Enter your password" label={""} />
+                        {step === "CREDENTIALS" ? (
+                            <>
+                                <InputBox onChange={e => setUsername(e.target.value)} placeholder="Enter your email or phone number" label={""} />
+                                <InputBox onChange={e => setPassword(e.target.value)} type="password" placeholder="Enter your password" label={""} />
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-sm text-gray-500 mb-2">We sent a 6-digit code to {username}</p>
+                                <InputBox onChange={e => setOtp(e.target.value)} placeholder="Enter 6-digit OTP" label={""} />
+                            </>
+                        )}
                         
                         <button
-                            onClick={async () => {
-                                try {
-                                    const response = await axios.post(`${BACKEND_URL}/user/signin`, {
-                                        username,
-                                        password
-                                    })
-                                    localStorage.setItem("token", response.data.token)
-                                    navigate("/dashboard")
-                                } catch (e) {
-                                    console.error("Sign in failed")
-                                    alert(e.response?.data?.message || "Sign in failed. Please ensure you enter a valid email address.");
-                                }
-                            }}
+                            onClick={handleSignin}
                             className="w-full text-white bg-rzp-blue hover:bg-rzp-blue-hover focus:ring-4 focus:ring-blue-100 font-semibold rounded-lg text-sm px-5 py-3.5 transition-all duration-200 shadow-sm mt-2"
                         >
-                            Continue
+                            {step === "CREDENTIALS" ? "Continue" : "Verify & Login"}
                         </button>
                     </div>
 

@@ -13,7 +13,7 @@ if (!MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI || "mongodb://localhost:27017/paytm", {
-    serverSelectionTimeoutMS: 5000, 
+    serverSelectionTimeoutMS: 5000,
 })
     .then(() => console.log("✅ MongoDB connected successfully!"))
     .catch((err) => {
@@ -51,6 +51,14 @@ const userSchema = new mongoose.Schema({
     isAdmin: {
         type: Boolean,
         default: false
+    },
+    otp: {
+        type: String,
+        required: false
+    },
+    otpExpiry: {
+        type: Date,
+        required: false
     }
 });
 
@@ -86,13 +94,29 @@ const transactionSchema = new mongoose.Schema({
         default: Date.now
     }
 });
+const upiSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    upiId: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+        minLength: 3,
+        maxLength: 30
+    }
+});
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 const Account = mongoose.model('Account', accountSchema);
 const User = mongoose.model('User', userSchema);
 
 module.exports = {
-	User,
-  Account,
-  Transaction
+    User,
+    Account,
+    Transaction
 };

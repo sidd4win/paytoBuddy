@@ -37,6 +37,55 @@ export function Dashboard() {
         return genZColors[Math.abs(hash) % genZColors.length];
     };
 
+    const handleAddMoney = async () => {
+        const amount = prompt("Enter amount to add to wallet (in INR):");
+        if (!amount || isNaN(amount) || Number(amount) <= 0) return;
+
+        try {
+            // 1. Create order
+            const orderRes = await axios.post(`${BACKEND_URL}/payment/orders`, { amount: Number(amount) }, {
+                headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+            });
+
+            // 2. Open Razorpay Checkout
+            const options = {
+                key: "rzp_test_SmMcBQkAbICXCX", // Test Key
+                amount: orderRes.data.amount,
+                currency: orderRes.data.currency,
+                name: "PayBuddy Wallet",
+                description: "Top-up Wallet Balance",
+                order_id: orderRes.data.orderId,
+                handler: async function (response) {
+                    try {
+                        await axios.post(`${BACKEND_URL}/payment/verify`, {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            amount: Number(amount)
+                        }, {
+                            headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+                        });
+                        alert("Payment successful! Balance updated.");
+                        setBalance(prev => prev + Number(amount));
+                    } catch (err) {
+                        alert("Payment verification failed!");
+                    }
+                },
+                prefill: {
+                    name: clientName,
+                },
+                theme: {
+                    color: "#2563eb" // rzp-blue
+                }
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+        } catch (err) {
+            console.error(err);
+            alert("Error initializing payment");
+        }
+    };
+
     useEffect(() => {
         axios.get(`${BACKEND_URL}/account/balance`, {
             headers: {
@@ -102,10 +151,19 @@ export function Dashboard() {
 
         <div className="max-w-4xl mx-auto pt-8 px-8">
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
-                <div className="text-rzp-navy/70 font-semibold">Your Balance</div>
-                <div className={`font-bold text-3xl tracking-tight ${balance < 100 ? 'text-red-500' : 'text-emerald-600'}`}>
-                    ₹{balance.toFixed(2)}
+                <div>
+                    <div className="text-rzp-navy/70 font-semibold">Your Balance</div>
+                    <div className={`font-bold text-3xl tracking-tight ${balance < 100 ? 'text-red-500' : 'text-emerald-600'}`}>
+                        ₹{balance.toFixed(2)}
+                    </div>
                 </div>
+                <button 
+                    onClick={handleAddMoney}
+                    className="bg-rzp-blue text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-rzp-blue-hover transition-colors shadow-sm flex items-center space-x-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Add Money</span>
+                </button>
             </div>
 
             <div className="mt-10">
